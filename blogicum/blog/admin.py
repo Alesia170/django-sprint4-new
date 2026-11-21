@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Category, Location, Post, Comment
+from blog.models import Category, Comment, Location, Post
 
 
 class BaseAdmin(admin.ModelAdmin):
@@ -20,7 +20,36 @@ class LocationAdmin(BaseAdmin):
 
 @admin.register(Post)
 class PostAdmin(BaseAdmin):
-    list_display = ['title', 'pub_date', 'author'] + BaseAdmin.list_display
+    fieldsets = (
+        (
+            None,
+            {
+                'fields': (
+                    'title',
+                    'pub_date',
+                    'author',
+                    'is_published',
+                )
+            },
+        ),
+        (
+            'Дополнительно',
+            {
+                'fields': (
+                    'category',
+                    'location',
+                    'image_tag',
+                )
+            },
+        ),
+    )
+    readonly_fields = ('image_tag',)
+    list_display = [
+        'title',
+        'pub_date',
+        'author',
+        'image_tag',
+    ] + BaseAdmin.list_display
     list_filter = BaseAdmin.list_filter + ['category']
 
 

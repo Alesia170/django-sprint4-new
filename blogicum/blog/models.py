@@ -1,7 +1,10 @@
 from textwrap import shorten
 
+from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.db import models
+from django.urls import reverse
+from django.utils.html import format_html
 
 MAX_TITLE_LENGTH = 256
 SHORT_TITLE_LENGTH = 20
@@ -9,7 +12,7 @@ SHORT_TITLE_LENGTH = 20
 User = get_user_model()
 
 
-class BaseModel(models.Model):
+class PublishableTimestampedModel(models.Model):
     is_published = models.BooleanField(
         default=True,
         verbose_name='Опубликовано',
@@ -23,7 +26,7 @@ class BaseModel(models.Model):
         abstract = True
 
 
-class Category(BaseModel):
+class Category(PublishableTimestampedModel):
     title = models.CharField(
         max_length=MAX_TITLE_LENGTH, verbose_name='Заголовок'
     )
@@ -31,11 +34,13 @@ class Category(BaseModel):
     slug = models.SlugField(
         unique=True,
         verbose_name='Идентификатор',
-        help_text='Идентификатор страницы для URL; '
-        'разрешены символы латиницы, цифры, дефис и подчёркивание.',
+        help_text=(
+            'Идентификатор страницы для URL; '
+            'разрешены символы латиницы, цифры, дефис и подчёркивание.',
+        ),
     )
 
-    class Meta(BaseModel.Meta):
+    class Meta(PublishableTimestampedModel.Meta):
         verbose_name = 'категория'
         verbose_name_plural = 'Категории'
 
@@ -43,12 +48,12 @@ class Category(BaseModel):
         return shorten(self.title, SHORT_TITLE_LENGTH, placeholder='...')
 
 
-class Location(BaseModel):
+class Location(PublishableTimestampedModel):
     name = models.CharField(
         max_length=MAX_TITLE_LENGTH, verbose_name='Название места'
     )
 
-    class Meta(BaseModel.Meta):
+    class Meta(PublishableTimestampedModel.Meta):
         verbose_name = 'местоположение'
         verbose_name_plural = 'Местоположения'
 
@@ -56,15 +61,17 @@ class Location(BaseModel):
         return shorten(self.name, SHORT_TITLE_LENGTH, placeholder='...')
 
 
-class Post(BaseModel):
+class Post(PublishableTimestampedModel):
     title = models.CharField(
         max_length=MAX_TITLE_LENGTH, verbose_name='Заголовок'
     )
     text = models.TextField(verbose_name='Текст')
     pub_date = models.DateTimeField(
         verbose_name='Дата и время публикации',
-        help_text='Если установить дату и время в будущем — '
-        'можно делать отложенные публикации.',
+        help_text=(
+            'Если установить дату и время в будущем — '
+            'можно делать отложенные публикации.'
+        ),
     )
     author = models.ForeignKey(
         User,
@@ -94,6 +101,18 @@ class Post(BaseModel):
         ordering = ('-pub_date',)
         default_related_name = 'posts'
 
+    @admin.display(description='Изображение')
+    def image_tag(self):
+        if self.image:
+            return format_html(
+                '<img src="{}" width="150" height="150">',
+                self.image.url,
+            )
+        return 'Нет изображения'
+
+    def get_absolute_url(self):
+        return reverse('blog:post_detail', kwargs={'post_id': self.pk})
+
     def __str__(self):
         return shorten(self.title, SHORT_TITLE_LENGTH, placeholder='...')
 
@@ -119,4 +138,9 @@ class Comment(models.Model):
         default_related_name = 'comments'
 
     def __str__(self):
-        return shorten(self.text, SHORT_TITLE_LENGTH, placeholder='...')
+        short_text = shorten(self.text, SHORT_TITLE_LENGTH, placeholder='...')
+        return (
+            f'Комментарий автора {self.author} '
+            f'к посту "{self.post}" '
+            f'текст комментария: {short_text}'
+        )

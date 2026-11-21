@@ -1,9 +1,7 @@
-import torch
-from transformers import (
-    AutoModelForSequenceClassification,
-    AutoTokenizer,
-)
 import functools
+
+import torch
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 from core.constants import TOXICITY_THRESHOLD
 
